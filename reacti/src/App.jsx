@@ -1,20 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import Container from "react-bootstrap/Container";
 import Table from "react-bootstrap/Table";
 import { useQuery } from "@tanstack/react-query";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { observer } from "mobx-react-lite";
+import { StoreContext } from "./StoreContext";
 
 function App() {
-  const [arrayData, setArrayData] = useState([]);
   return (
     <div>
-      <TextInputWithSearch setArrayData={setArrayData} />
+      <TextInputWithSearch />
       <div style={{ height: "300px", overflow: "scroll" }}>
         <Container fluid>
-          <BooksTable
-            data={arrayData}
-            columnNames={["title", "author", "description"]}
-          />
+          <BooksTable columnNames={["title", "author", "description"]} />
         </Container>
       </div>
     </div>
@@ -29,8 +27,9 @@ const fetchSearchResults = async (query) => {
   return response.json();
 };
 
-function TextInputWithSearch({ setArrayData }) {
+function TextInputWithSearch() {
   const [inputValue, setInputValue] = useState("");
+  const store = useContext(StoreContext);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["search-results", inputValue],
@@ -39,22 +38,10 @@ function TextInputWithSearch({ setArrayData }) {
   });
 
   useEffect(() => {
-    if (data) {
-      setArrayData(data);
-    } else {
-      console.error("Invalid response structure:", data);
+    if (Array.isArray(data)) {
+      store.setApiResponse(data);
     }
-  }, [data]);
-
-  /*
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (isError) {
-    return <div>Error: {error.message}</div>;
-  }
-  */
+  }, [data, store]); // The effect runs whenever 'data' or 'store' changes
 
   return (
     <div>
@@ -68,7 +55,9 @@ function TextInputWithSearch({ setArrayData }) {
   );
 }
 
-function BooksTable({ columnNames, data }) {
+const BooksTable = observer(({ columnNames }) => {
+  const store = useContext(StoreContext);
+
   let tableHeader = (
     <thead>
       <tr>
@@ -79,7 +68,7 @@ function BooksTable({ columnNames, data }) {
     </thead>
   );
 
-  let tableRows = data.map((row, index) => (
+  let tableRows = store.apiResponse.map((row, index) => (
     <tr key={index}>
       <td>{row.title}</td>
       <td>{row.author}</td>
@@ -93,6 +82,6 @@ function BooksTable({ columnNames, data }) {
       <tbody>{tableRows}</tbody>
     </Table>
   );
-}
+});
 
 export default App;
